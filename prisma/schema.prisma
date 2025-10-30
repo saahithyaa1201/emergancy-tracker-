@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String
+  fullName        String
+  phone           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  panicAlerts     PanicAlert[]
+  trustedContacts TrustedContact[]
+
+  @@map("users")
+}
+
+model PanicAlert {
+  id                  String                @id @default(uuid())
+  userId              String
+  latitude            Float
+  longitude           Float
+  address             String?
+  status              AlertStatus           @default(ACTIVE)
+  resolvedAt          DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  alert_notifications alert_notifications[]
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("panic_alerts")
+}
+
+model TrustedContact {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  phone     String
+  email     String?
+  priority  Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trusted_contacts")
+}
+
+model alert_notifications {
+  id           String             @id @default(uuid())
+  panicAlertId String
+  contactName  String
+  contactPhone String
+  contactEmail String?
+  sentAt       DateTime           @default(now())
+  status       NotificationStatus @default(PENDING)
+  deliveredAt  DateTime?
+  errorMessage String?
+  panic_alerts PanicAlert         @relation(fields: [panicAlertId], references: [id], onDelete: Cascade)
+
+  @@index([panicAlertId])
+}
+
+enum AlertStatus {
+  ACTIVE
+  RESOLVED
+  CANCELLED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
